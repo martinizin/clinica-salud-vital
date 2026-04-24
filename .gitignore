@@ -1,2 +1,5 @@
 # Markdown files
 *.md
+
+# Docs directory
+docs/

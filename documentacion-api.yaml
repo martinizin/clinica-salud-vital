@@ -1,0 +1,190 @@
+openapi: 3.0.3
+info:
+  title: SaludVital - API de Pre-Registros
+  description: >
+    API REST para la gestión de pre-registros de pacientes del Sistema de Admisiones
+    hacia el Sistema de Facturación de la clínica SaludVital.
+    Esta API reemplaza el flujo de transferencia de archivos CSV.
+  version: 1.0.0
+  contact:
+    name: SaludVital TI
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Servidor de desarrollo
+
+paths:
+  /pre-registros:
+    post:
+      summary: Crear pre-registro de paciente
+      description: Registra un nuevo paciente pre-registrado para facturación.
+      operationId: crearPreRegistro
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreRegistroRequest'
+            example:
+              patient_id: 1001
+              full_name: "Ana Perez"
+              appointment_date: "2026-05-10"
+              insurance_code: "IESS"
+      responses:
+        '201':
+          description: Pre-registro creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreRegistroResponse'
+        '400':
+          description: JSON malformado o campos faltantes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Datos no pasan validación de negocio
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "VALIDATION_ERROR"
+                message: "Pre-registro inválido"
+                details:
+                  - "insurance_code debe ser uno de: IESS, PRIVADO, NINGUNO"
+
+    get:
+      summary: Listar pre-registros
+      description: Obtiene la lista de pre-registros con filtros opcionales.
+      operationId: listarPreRegistros
+      parameters:
+        - name: appointment_date
+          in: query
+          description: Filtrar por fecha de cita (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: insurance_code
+          in: query
+          description: Filtrar por código de seguro
+          schema:
+            type: string
+            enum: [IESS, PRIVADO, NINGUNO]
+      responses:
+        '200':
+          description: Lista de pre-registros
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PreRegistroResponse'
+
+  /pre-registros/{id}:
+    get:
+      summary: Obtener pre-registro por ID
+      description: Obtiene los datos de un pre-registro específico.
+      operationId: obtenerPreRegistro
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identificador del pre-registro
+          schema:
+            type: string
+            example: "pr-20260510-001"
+      responses:
+        '200':
+          description: Pre-registro encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreRegistroResponse'
+        '404':
+          description: Pre-registro no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    PreRegistroRequest:
+      type: object
+      required:
+        - patient_id
+        - full_name
+        - appointment_date
+        - insurance_code
+      properties:
+        patient_id:
+          type: integer
+          description: Identificador del paciente
+          example: 1001
+        full_name:
+          type: string
+          description: Nombre completo del paciente
+          example: "Ana Perez"
+        appointment_date:
+          type: string
+          format: date
+          description: Fecha de la cita (YYYY-MM-DD)
+          example: "2026-05-10"
+        insurance_code:
+          type: string
+          description: Código de seguro del paciente
+          enum: [IESS, PRIVADO, NINGUNO]
+          example: "IESS"
+
+    PreRegistroResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Identificador único del pre-registro
+          example: "pr-20260510-001"
+        patient_id:
+          type: integer
+          example: 1001
+        full_name:
+          type: string
+          example: "Ana Perez"
+        appointment_date:
+          type: string
+          format: date
+          example: "2026-05-10"
+        insurance_code:
+          type: string
+          enum: [IESS, PRIVADO, NINGUNO]
+          example: "IESS"
+        status:
+          type: string
+          description: Estado del pre-registro
+          enum: [REGISTRADO, PROCESADO, RECHAZADO]
+          example: "REGISTRADO"
+        created_at:
+          type: string
+          format: date-time
+          description: Fecha y hora de creación
+          example: "2026-05-10T10:30:15Z"
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Código de error
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          description: Mensaje descriptivo
+          example: "Pre-registro inválido"
+        details:
+          type: array
+          items:
+            type: string
+          description: Lista de errores específicos
+          example:
+            - "insurance_code debe ser uno de: IESS, PRIVADO, NINGUNO"
